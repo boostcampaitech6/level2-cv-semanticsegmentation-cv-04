@@ -61,7 +61,6 @@ ENV/
 data/
 input/
 saved/
-datasets/
 wandb
 *.sh
 model/checkpoint_transform.py
