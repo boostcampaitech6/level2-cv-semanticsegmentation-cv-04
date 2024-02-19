@@ -46,18 +46,12 @@ def main(args):
             cfg.optim_wrapper.loss_scale = 'dynamic'
         
         cfg.data_root = args.root
-        cfg.train_dataloader.dataset.ann_file = args.annotation  # train json 정보
-        # cfg.val_dataloader.dataset.ann_file = args.valid_annotation  # validation json 정보
-        # cfg.val_evaluator.ann_file = args.root+args.valid_annotation
         cfg.load_from = args.load_from
         
     else:  # test(inference) mode
         cfg.load_from = os.path.join(cfg.work_dir, f"{args.checkpoint}.pth")
-        
-        # cfg = trigger_visualization_hook(cfg, args)
             
         cfg.data_root = args.root
-        cfg.test_dataloader.dataset.ann_file = args.annotation  # test.json 정보
         cfg.test_evaluator.outfile_prefix = args.output
         
     # build the runner from config
