@@ -114,9 +114,9 @@ def main(args):
     elif args.scheduler == "plateau":
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            mode="min",
+            mode="max",
             factor=0.8,
-            patience=5,
+            patience=10,
             cooldown=10,
             eps=1e-6
         )
