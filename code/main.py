@@ -2,6 +2,7 @@ import os
 import wandb
 import argparse
 import datetime
+import time
 
 from tqdm.auto import tqdm
 
@@ -44,7 +45,7 @@ def main(args):
         os.mkdir(save_dir)
     
     # Model
-    model = smp.DeepLabV3Plus(
+    model = smp.UnetPlusPlus(
                 encoder_name=args.encoder_name, # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
                 encoder_weights=args.encoder_weights,     # use `imagenet` pre-trained weights for encoder initialization
                 in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
@@ -89,6 +90,8 @@ def main(args):
     # Optimizer
     if args.optimizer == "adam":
         optimizer = optim.Adam(params=model.parameters(), lr=args.lr)
+    elif args.optimizer == "adamw":
+        optimizer = optim.AdamW(params=model.parameters(), lr=args.lr)
     
     # Scheduler
     if args.scheduler == "cosine":
@@ -108,7 +111,7 @@ def main(args):
             last_epoch=args.epochs,
             verbose=True
         )
-    elif args.scehduler == "plateau":
+    elif args.scheduler == "plateau":
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
@@ -127,15 +130,12 @@ def main(args):
     for epoch in range(args.epochs):
         model.train()
         total_train_loss = 0
-        for step, (images, masks) in enumerate(train_loader):            
-            # gpu 연산을 위해 device 할당
+        train_epoch_start = time.time()
+        for step, (images, masks) in enumerate(train_loader):
             images, masks = images.cuda(), masks.cuda()
             model = model.cuda()
             
-            # inference
             outputs = model(images)
-            
-            # loss 계산
             loss = criterion(outputs, masks)
             optimizer.zero_grad()
             loss.backward()
@@ -143,12 +143,11 @@ def main(args):
             
             total_train_loss += loss.item()
             
-            # step 주기에 따른 loss 출력
+            # logging with CLI
             if (step + 1) % (len(train_loader)//10) == 0:
                 print(
-                    f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | '
-                    f'Epoch [{epoch+1}/{args.epochs}], '
-                    f'Step [{step+1}/{len(train_loader)}], '
+                    f'Epoch [{epoch+1:3d}/{args.epochs}] | '
+                    f'Step [{step+1:3d}/{len(train_loader)}] | '
                     f'Loss: {round(loss.item(), 4)}'
                 )
             
@@ -161,6 +160,10 @@ def main(args):
             
         mean_train_loss = total_train_loss/len(train_loader)
         print(f"Train Mean Loss : {round(mean_train_loss, 4)}")
+        
+        elapsed_train_time = datetime.timedelta(seconds=round(time.time() - train_epoch_start))
+        print(f"Elapsed Training Time: {elapsed_train_time}")
+        print(f"ETA : {elapsed_train_time * (args.epochs - epoch+1)}")
           
         # Validation
         print(f'Start validation #{epoch+1:2d}')
@@ -171,7 +174,7 @@ def main(args):
         dices = []
         
         model.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             for step, (images, masks) in tqdm(enumerate(valid_loader), total=len(valid_loader)):
                 images, masks = images.cuda(), masks.cuda()
                 model = model.cuda()
@@ -222,8 +225,11 @@ def main(args):
                 print(f"Save model in {save_dir}")
                 best_dice = avg_dice
                 save_model(model, save_dir=save_dir, file_name=args.checkpoint)
-                
-        scheduler.step(metrics=avg_dice)
+        
+        if args.scheduler == "plateau":
+            scheduler.step(avg_dice)
+        else:
+            scheduler.step()
                 
              
 if __name__ == '__main__':
