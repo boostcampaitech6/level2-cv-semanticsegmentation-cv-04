@@ -48,7 +48,7 @@
 
 Bone Segmentation은 인공지능 분야에서 중요한 응용 분야 중 하나로, 특히, 딥러닝 기술을 이용한 뼈 Segmentation은 많은 연구가 이루어지고 있으며, 다양한 목적으로 도움을 줄 수 있습니다.
 
-이번 프로젝트는 부스트캠프 AI Tech CV 트랙내에서 진행된 대회이며 dice score로 최종평가를 진행하게 됩니다.
+이번 프로젝트는 부스트캠프 AI Tech CV 트랙내에서 진행된 대회이며 dice score로 최종평가를 진행하게 됩니다
 
 ## Final Score
 Public
